@@ -17,7 +17,32 @@ app.use(express.json()); //add JSON body parser to each following route handler
 app.use(cors()); //add CORS support to each following route handler
 
 app.get("/", async (_req, res) => {
-    res.json({ msg: "Hello! There's nothing interesting for GET /" });
+    res.json({
+        msg: "Hello! There's nothing interesting for GET , Try /users",
+    });
+});
+//GET all users
+app.get("/users", async (_req, res) => {
+    try {
+        const text = "SELECT name FROM users ORDER BY name";
+        const result = await client.query(text);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+    }
+});
+
+//GET users by id
+app.get("/users/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const text = "SELECT name FROM users WHERE id = $1";
+        const value = [id];
+        const result = await client.query(text, value);
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+    }
 });
 
 app.get("/health-check", async (_req, res) => {
