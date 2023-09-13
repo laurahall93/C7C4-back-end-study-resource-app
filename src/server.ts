@@ -24,7 +24,7 @@ app.get("/", async (_req, res) => {
 //GET all users
 app.get("/users", async (_req, res) => {
     try {
-        const text = "SELECT name FROM users ORDER BY name";
+        const text = "SELECT id, name FROM users ORDER BY name";
         const result = await client.query(text);
         res.status(200).json(result.rows);
     } catch (error) {
@@ -43,6 +43,28 @@ app.get("/users/:id", async (req, res) => {
     } catch (error) {
         console.error(error);
     }
+});
+
+app.get("/resources", async (_req, res) => {
+    try {
+        const text =
+            "SELECT a.id, a.title, a.author, a.url, a.description, a.tags, a.type, a.first_study_time, a.creation_time, a.user_comment, a.comment_reason, users.name FROM resources AS a JOIN users ON a.created_by = users.id ORDER BY creation_time DESC";
+        const result = await client.query(text);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+    }
+});
+
+app.get("/resources/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const text =
+            "SELECT a.id, a.title, a.author, a.url, a.description, a.tags, a.type, a.first_study_time, a.creation_time, a.user_comment, a.comment_reason, users.name FROM resources AS a JOIN users ON a.created_by = users.id WHERE a.id = $1";
+        const value = [id];
+        const result = await client.query(text, value);
+        res.status(200).json(result.rows[0]);
+    } catch (error) {}
 });
 
 app.get("/health-check", async (_req, res) => {
