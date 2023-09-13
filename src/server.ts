@@ -64,7 +64,9 @@ app.get("/resources/:id", async (req, res) => {
         const value = [id];
         const result = await client.query(text, value);
         res.status(200).json(result.rows[0]);
-    } catch (error) {}
+    } catch (error) {
+        console.error(error);
+    }
 });
 
 app.get("/health-check", async (_req, res) => {
