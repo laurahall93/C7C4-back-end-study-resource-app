@@ -16,7 +16,6 @@ CREATE TABLE resources(
     author VARCHAR(50) NOT NULL,
     url VARCHAR(1000) NOT NULL,
     description VARCHAR(1000) NOT NULL,
-    tags VARCHAR(255) NOT NULL,
     type VARCHAR(50) NOT NULL,
     first_study_time VARCHAR(255) NOT NULL,
     creation_time DATE DEFAULT CURRENT_DATE,
@@ -25,10 +24,26 @@ CREATE TABLE resources(
     comment_reason VARCHAR(1000) NOT NULL
 );
 
+DROP TABLE IF EXISTS tags;
+
+CREATE TABLE tags(
+    id SERIAL PRIMARY KEY,
+    tag_name VARCHAR(50) NOT NULL 
+);
+
+DROP TABLE IF EXISTS resource_tags;
+
+CREATE TABLE resource_tags(
+    resource_id INT REFERENCES resources(id) NOT NULL,
+    tag_id INT REFERENCES tags(id) NOT NULL,
+    PRIMARY KEY (resource_id, tag_id)
+);
+
+
 DROP TABLE IF EXISTS resource_votes;
 
 CREATE TABLE resource_votes(
-    id INT REFERENCES resources(id),
+    id INT PRIMARY KEY REFERENCES resources(id),
     likes INT DEFAULT 0,
     dislikes INT DEFAULT 0
 );
