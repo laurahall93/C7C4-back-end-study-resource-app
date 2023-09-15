@@ -28,7 +28,7 @@ DROP TABLE IF EXISTS tags;
 
 CREATE TABLE tags(
     id SERIAL PRIMARY KEY,
-    tag_name VARCHAR(50) NOT NULL 
+    tag_name VARCHAR(50) NOT NULL UNIQUE
 );
 
 DROP TABLE IF EXISTS resource_tags;

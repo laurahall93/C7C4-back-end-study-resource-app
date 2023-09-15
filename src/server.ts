@@ -55,6 +55,7 @@ app.post("/tags", async (req, res) => {
         console.log("Tag added to DB");
     } catch (error) {
         console.error(error);
+        res.status(500).json("Internal server error, check your server logs");
     }
 });
 
@@ -80,27 +81,41 @@ app.get("/tags", async (_req, res) => {
         console.error(error);
     }
 });
-// app.get("/resources/tags/:id", async (req, res) => {
-//     try {
-//         const tagdsId = req.params.id;
-//         const text = "SELECT "
 
-//     } catch (error) {
-//     console.error(error);
-//     }
-// })
+async function getResourcesWithTags() {
+    const queryResourcesText =
+        "SELECT a.id, a.title, a.author, a.url, a.description, a.type, a.first_study_time, a.creation_time, a.user_comment, a.comment_reason, users.name FROM resources AS a JOIN users ON a.created_by = users.id ORDER BY a.id DESC";
+    const resourcesWithUsernameResult = await client.query(queryResourcesText);
+    const queryTagsText = "SELECT * FROM resource_tags";
+    const tagsResult = await client.query(queryTagsText);
+    return [resourcesWithUsernameResult, tagsResult];
+}
+
+console.log(getResourcesWithTags());
 
 // GET all resources
-app.get("/resources", async (_req, res) => {
-    try {
-        const text =
-            "SELECT a.id, a.title, a.author, a.url, a.description, a.type, a.first_study_time, a.creation_time, a.user_comment, a.comment_reason, users.name FROM resources AS a JOIN users ON a.created_by = users.id ORDER BY a.id DESC";
-        const result = await client.query(text);
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error(error);
-    }
-});
+// app.get("/resources", async (_req, res) => {
+//     try {
+//         const text =
+//             "SELECT a.id, a.title, a.author, a.url, a.description, a.type, a.first_study_time, a.creation_time, a.user_comment, a.comment_reason, users.name FROM resources AS a JOIN users ON a.created_by = users.id ORDER BY a.id DESC";
+//         const result = await client.query(text);
+//         res.status(200).json(result.rows);
+//     } catch (error) {
+//         console.error(error);
+//     }
+// });
+
+// app.get("/resources", async (_req, res) => {
+//     try {
+//         const text =
+//             "SELECT a.id, a.title, a.author, a.url, a.description, a.type, a.first_study_time, a.creation_time, a.user_comment, a.comment_reason, tags.tag_name FROM resources AS a JOIN resource_tags ON a.id = resource_tags.resource_id JOIN tags ON resource_tags.tag_id = tags.id ORDER BY a.id DESC";
+//         const result = await client.query(text);
+//         res.status(200).json(result.rows);
+//     } catch (error) {
+//         console.error(error);
+//     }
+// });
+
 // GET Resources by id
 app.get("/resources/:id", async (req, res) => {
     try {
@@ -296,18 +311,6 @@ app.put("/resources/:id/dislikes", async (req, res) => {
 //         console.log(error);
 //     }
 // });
-
-app.get("/health-check", async (_req, res) => {
-    try {
-        //For this to be successful, must connect to db
-        await client.query("select now()");
-        res.status(200).send("system ok");
-    } catch (error) {
-        //Recover from error rather than letting system halt
-        console.error(error);
-        res.status(500).send("An error occurred. Check server logs.");
-    }
-});
 
 connectToDBAndStartListening();
 
