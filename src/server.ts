@@ -45,6 +45,54 @@ app.get("/users/:id", async (req, res) => {
         console.error(error);
     }
 });
+
+//Users votes
+app.get("/users/:userId/votes", async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const queryText = "SELECT * FROM users_votes where user_id = $1";
+        const queryResult = await client.query(queryText, [userId]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+app.post("/users/:userId/votes", async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { resourceId, voted } = req.body;
+        const queryText =
+            "INSERT INTO users_votes (user_id, resource_id, voted) values ($1, $2, $3) returning *";
+        const queryResult = await client.query(queryText, [
+            userId,
+            resourceId,
+            voted,
+        ]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+app.patch("/users/:userId/votes/:resourceId", async (req, res) => {
+    try {
+        const { userId, resourceId } = req.params;
+        const { voted } = req.body;
+        const queryText =
+            "UPDATE users_votes SET voted = $1 WHERE user_id = $2 AND resource_id = $3 returning *";
+        const queryResult = await client.query(queryText, [
+            voted,
+            userId,
+            resourceId,
+        ]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+//Tags
 app.post("/tags", async (req, res) => {
     try {
         const data = req.body;
