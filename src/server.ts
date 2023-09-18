@@ -341,16 +341,60 @@ app.patch("/resources/:id/votes", async (req, res) => {
     }
 });
 
-// Study list - to complete
-// app.get("/users/:id/study_list", async (req, res) => {
-//     try {
-//         const userId = req.params.id;
-//         const text =
-//             "SELECT study_list.id AS study_list_id, user.name AS user_name, resources.title ";
-//     } catch (error) {
-//         console.log(error);
-//     }
-// });
+// Study list
+app.get("/users/:userId/study-list", async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const queryText =
+            "SELECT id, resource_id, is_completed FROM study_list WHERE user_id = $1";
+        const queryResult = await client.query(queryText, [userId]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+app.post("/users/:userId/study-list", async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { resourceId } = req.body;
+        const queryText =
+            "INSERT INTO study_list (user_id, resource_id) VALUES ($1, $2) returning *";
+        const queryResult = await client.query(queryText, [userId, resourceId]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+app.patch("/users/:userId/study-list/:resourceId", async (req, res) => {
+    try {
+        const { userId, resourceId } = req.params;
+        const { isCompleted } = req.body;
+        const queryText =
+            "UPDATE study_list SET is_completed = $1  WHERE user_id = $2 AND resource_id = $3 returning *";
+        const queryResult = await client.query(queryText, [
+            isCompleted,
+            userId,
+            resourceId,
+        ]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+app.delete("/users/:userId/study-list/:resourceId", async (req, res) => {
+    try {
+        const { userId, resourceId } = req.params;
+        const queryText =
+            "DELETE FROM study_list WHERE user_id = $1 AND resource_id = $2 returning *";
+        const queryResult = await client.query(queryText, [userId, resourceId]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
 
 connectToDBAndStartListening();
 
