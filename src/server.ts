@@ -82,73 +82,88 @@ app.get("/tags", async (_req, res) => {
     }
 });
 
-async function getResourcesWithTags() {
-    const queryResourcesText =
-        "SELECT a.id, a.title, a.author, a.url, a.description, a.type, a.first_study_time, a.creation_time, a.user_comment, a.comment_reason, users.name FROM resources AS a JOIN users ON a.created_by = users.id ORDER BY a.id DESC";
-    const resourcesWithUsernameResult = await client.query(queryResourcesText);
-    const queryTagsText = "SELECT * FROM resource_tags";
-    const tagsResult = await client.query(queryTagsText);
-    return [resourcesWithUsernameResult, tagsResult];
-}
-
-console.log(getResourcesWithTags());
-
-// GET all resources
-// app.get("/resources", async (_req, res) => {
-//     try {
-//         const text =
-//             "SELECT a.id, a.title, a.author, a.url, a.description, a.type, a.first_study_time, a.creation_time, a.user_comment, a.comment_reason, users.name FROM resources AS a JOIN users ON a.created_by = users.id ORDER BY a.id DESC";
-//         const result = await client.query(text);
-//         res.status(200).json(result.rows);
-//     } catch (error) {
-//         console.error(error);
-//     }
-// });
-
-// app.get("/resources", async (_req, res) => {
-//     try {
-//         const text =
-//             "SELECT a.id, a.title, a.author, a.url, a.description, a.type, a.first_study_time, a.creation_time, a.user_comment, a.comment_reason, tags.tag_name FROM resources AS a JOIN resource_tags ON a.id = resource_tags.resource_id JOIN tags ON resource_tags.tag_id = tags.id ORDER BY a.id DESC";
-//         const result = await client.query(text);
-//         res.status(200).json(result.rows);
-//     } catch (error) {
-//         console.error(error);
-//     }
-// });
-
-// GET Resources by id
-app.get("/resources/:id", async (req, res) => {
+app.get("/resources", async (_req, res) => {
     try {
-        const id = req.params.id;
-        const text =
-            "SELECT a.id, a.title, a.author, a.url, a.description, a.type, a.first_study_time, a.creation_time, a.user_comment, a.comment_reason, users.name FROM resources AS a JOIN users ON a.created_by = users.id WHERE a.id = $1";
-        const value = [id];
-        const result = await client.query(text, value);
-        res.status(200).json(result.rows[0]);
+        const queryText = `
+    SELECT resources.*, users.name AS user_name, ARRAY_AGG(tags.tag_name) AS tags
+    FROM resources
+    INNER JOIN users ON resources.created_by = users.id
+    INNER JOIN resource_tags ON resources.id = resource_tags.resource_id
+    INNER JOIN tags ON resource_tags.tag_id = tags.id
+    GROUP BY resources.id, users.name
+    ORDER BY resources.id DESC;
+  `;
+
+        const result = await client.query(queryText);
+        res.status(200).json(result.rows);
     } catch (error) {
         console.error(error);
     }
 });
+
+app.get("/resources/:id", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const queryText = `
+    SELECT resources.*, users.name AS user_name, ARRAY_AGG(tags.tag_name) AS tags
+    FROM resources
+    INNER JOIN users ON resources.created_by = users.id
+    INNER JOIN resource_tags ON resources.id = resource_tags.resource_id
+    INNER JOIN tags ON resource_tags.tag_id = tags.id
+    GROUP BY resources.id, users.name
+    HAVING resources.id = $1
+    ORDER BY resources.id DESC;
+  `;
+
+        const result = await client.query(queryText, [id]);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+    }
+});
+
 //Post new resource
 app.post("/resources/", async (req, res) => {
     try {
-        const data = req.body;
-        const text =
-            "INSERT INTO resources (title, author, url, description, type, first_study_time, created_by, user_comment, comment_reason) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *";
-        const value = [
-            data.title,
-            data.author,
-            data.url,
-            data.description,
-            data.tags,
-            data.type,
-            data.first_study_time,
-            data.created_by,
-            data.user_comment,
-            data.comment_reason,
+        const {
+            title,
+            author,
+            url,
+            description,
+            tags,
+            type,
+            first_study_time,
+            created_by,
+            user_comment,
+            comment_reason,
+        } = req.body;
+        const resourceQueryText =
+            "INSERT INTO resources (title, author, url, description, type, first_study_time, created_by, user_comment, comment_reason) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *";
+        const resourceValues = [
+            title,
+            author,
+            url,
+            description,
+            type,
+            first_study_time,
+            created_by,
+            user_comment,
+            comment_reason,
         ];
-        const result = await client.query(text, value);
-        res.status(201).json(result.rows);
+        const result = await client.query(resourceQueryText, resourceValues);
+        const resourceId = result.rows[0].id;
+        for (const tag of tags) {
+            const tagIdResult = await client.query(
+                "SELECT id from tags where tag_name = $1",
+                [tag]
+            );
+            const tagId = tagIdResult.rows[0].id;
+            await client.query("INSERT INTO resource_tags VALUES ($1, $2)", [
+                resourceId,
+                tagId,
+            ]);
+        }
+        res.status(200).json(result.rows);
         console.log("Data added to DB");
     } catch (error) {
         console.error(error);
@@ -172,6 +187,12 @@ app.delete("/resources/:id", async (req, res) => {
             "DELETE FROM resource_comments WHERE resource_id = $1",
             value
         );
+
+        await client.query(
+            "DELETE FROM resource_tags WHERE resource_id = $1",
+            value
+        );
+
         const text = "DELETE FROM resources WHERE id = $1 RETURNING *";
 
         const result = await client.query(text, value);
