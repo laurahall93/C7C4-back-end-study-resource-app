@@ -43,7 +43,7 @@ CREATE TABLE resource_tags(
 DROP TABLE IF EXISTS resource_votes;
 
 CREATE TABLE resource_votes(
-    id INT PRIMARY KEY REFERENCES resources(id),
+    resource_id INT PRIMARY KEY REFERENCES resources(id),
     likes INT DEFAULT 0,
     dislikes INT DEFAULT 0
 );
