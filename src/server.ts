@@ -134,7 +134,7 @@ app.delete("/tags/:id", async (req, res) => {
 app.get("/resources", async (_req, res) => {
     try {
         const queryText = `
-    SELECT resources.*, users.name AS user_name, ARRAY_AGG(tags.tag_name) AS tags
+    SELECT resources.*, users.name AS user_name, STRING_AGG(tags.tag_name, ',') AS tags
     FROM resources
     INNER JOIN users ON resources.created_by = users.id
     INNER JOIN resource_tags ON resources.id = resource_tags.resource_id
@@ -154,7 +154,7 @@ app.get("/resources/:id", async (req, res) => {
     try {
         const id = req.params.id;
         const queryText = `
-    SELECT resources.*, users.name AS user_name, ARRAY_AGG(tags.tag_name) AS tags
+    SELECT resources.*, users.name AS user_name, STRING_AGG(tags.tag_name, ',') AS tags
     FROM resources
     INNER JOIN users ON resources.created_by = users.id
     INNER JOIN resource_tags ON resources.id = resource_tags.resource_id
