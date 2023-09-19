@@ -43,7 +43,7 @@ CREATE TABLE resource_tags(
 DROP TABLE IF EXISTS resource_votes;
 
 CREATE TABLE resource_votes(
-    id INT PRIMARY KEY REFERENCES resources(id),
+    resource_id INT PRIMARY KEY REFERENCES resources(id),
     likes INT DEFAULT 0,
     dislikes INT DEFAULT 0
 );
@@ -59,11 +59,13 @@ CREATE TABLE resource_comments(
 
 DROP TABLE IF EXISTS users_votes;
 
+CREATE TYPE user_vote_options AS ENUM('Liked','Disliked', 'Neither');
+
 CREATE TABLE users_votes(
-    id  INT REFERENCES users(id),
+    user_id  INT REFERENCES users(id) NOT NULL,
     resource_id INT REFERENCES resources(id),
-    has_liked BOOLEAN DEFAULT false,
-    has_disliked BOOLEAN DEFAULT false
+    voted user_vote_options default 'Neither'
+    PRIMARY KEY (id, resource_id)
 );
 
 DROP TABLE IF EXISTS study_list;

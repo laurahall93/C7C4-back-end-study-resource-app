@@ -22,7 +22,8 @@ app.get("/", async (_req, res) => {
         msg: "Hello! There's nothing interesting for GET , Try /users",
     });
 });
-//GET all users
+
+//Users
 app.get("/users", async (_req, res) => {
     try {
         const text = "SELECT id, name FROM users ORDER BY name";
@@ -33,7 +34,6 @@ app.get("/users", async (_req, res) => {
     }
 });
 
-//GET users by id
 app.get("/users/:id", async (req, res) => {
     try {
         const id = req.params.id;
@@ -45,6 +45,64 @@ app.get("/users/:id", async (req, res) => {
         console.error(error);
     }
 });
+
+//Users votes
+app.get("/users/:userId/votes", async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const queryText = "SELECT * FROM users_votes where user_id = $1";
+        const queryResult = await client.query(queryText, [userId]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+app.post("/users/:userId/votes", async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { resourceId, voted } = req.body;
+        const queryText =
+            "INSERT INTO users_votes (user_id, resource_id, voted) values ($1, $2, $3) returning *";
+        const queryResult = await client.query(queryText, [
+            userId,
+            resourceId,
+            voted,
+        ]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+app.patch("/users/:userId/votes/:resourceId", async (req, res) => {
+    try {
+        const { userId, resourceId } = req.params;
+        const { voted } = req.body;
+        const queryText =
+            "UPDATE users_votes SET voted = $1 WHERE user_id = $2 AND resource_id = $3 returning *";
+        const queryResult = await client.query(queryText, [
+            voted,
+            userId,
+            resourceId,
+        ]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+//Tags
+app.get("/tags", async (_req, res) => {
+    try {
+        const text = "SELECT * FROM tags";
+        const result = await client.query(text);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+    }
+});
+
 app.post("/tags", async (req, res) => {
     try {
         const data = req.body;
@@ -72,16 +130,7 @@ app.delete("/tags/:id", async (req, res) => {
     }
 });
 
-app.get("/tags", async (_req, res) => {
-    try {
-        const text = "SELECT * FROM tags";
-        const result = await client.query(text);
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error(error);
-    }
-});
-
+// Resources
 app.get("/resources", async (_req, res) => {
     try {
         const queryText = `
@@ -112,8 +161,7 @@ app.get("/resources/:id", async (req, res) => {
     INNER JOIN tags ON resource_tags.tag_id = tags.id
     GROUP BY resources.id, users.name
     HAVING resources.id = $1
-    ORDER BY resources.id DESC;
-  `;
+    ORDER BY resources.id DESC;`;
 
         const result = await client.query(queryText, [id]);
         res.status(200).json(result.rows);
@@ -122,7 +170,6 @@ app.get("/resources/:id", async (req, res) => {
     }
 });
 
-//Post new resource
 app.post("/resources/", async (req, res) => {
     try {
         const {
@@ -170,8 +217,6 @@ app.post("/resources/", async (req, res) => {
     }
 });
 
-//DELETE resource by id
-
 app.delete("/resources/:id", async (req, res) => {
     try {
         const id = req.params.id;
@@ -203,7 +248,33 @@ app.delete("/resources/:id", async (req, res) => {
     }
 });
 
-//POST comments on resource by id
+//Resource comments
+app.get("/resources/:id/comments", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const text =
+            "SELECT b.id, users.name, b.comment FROM resource_comments  AS b JOIN users ON b.commented_by = users.id WHERE b.resource_id = $1";
+        const value = [id];
+        const result = await client.query(text, value);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+    }
+});
+
+app.get("/resources/:id/comments/:commentId", async (req, res) => {
+    try {
+        const id = req.params.id;
+        const commentId = req.params.commentId;
+        const text =
+            " SELECT b.id, users.name, b.comment FROM resource_comments  AS b JOIN users ON b.commented_by = users.id WHERE b.resource_id = $1 AND b.id = $2";
+        const value = [id, commentId];
+        const result = await client.query(text, value);
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+    }
+});
 
 app.post("/resources/:id/comments", async (req, res) => {
     try {
@@ -221,41 +292,13 @@ app.post("/resources/:id/comments", async (req, res) => {
     }
 });
 
-//GET all coments for resource
-app.get("/resources/:id/comments", async (req, res) => {
+app.delete("/resources/:id/comments/:commentId", async (req, res) => {
     try {
         const id = req.params.id;
-        const text =
-            "SELECT b.id, users.name, b.comment FROM resource_comments  AS b JOIN users ON b.commented_by = users.id WHERE b.resource_id = $1";
-        const value = [id];
-        const result = await client.query(text, value);
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error(error);
-    }
-});
-// GET comment from resources by comments id
-app.get("/resources/:id/comments/:comment_id", async (req, res) => {
-    try {
-        const id = req.params.id;
-        const comment_id = req.params.comment_id;
-        const text =
-            " SELECT b.id, users.name, b.comment FROM resource_comments  AS b JOIN users ON b.commented_by = users.id WHERE b.resource_id = $1 AND b.id = $2";
-        const value = [id, comment_id];
-        const result = await client.query(text, value);
-        res.status(200).json(result.rows[0]);
-    } catch (error) {
-        console.error(error);
-    }
-});
-
-app.delete("/resources/:id/comments/:comment_id", async (req, res) => {
-    try {
-        const id = req.params.id;
-        const comment_id = req.params.comment_id;
+        const commentId = req.params.commentId;
         const text =
             "DELETE FROM resource_comments WHERE resource_id = $1 AND id = $2 RETURNING *";
-        const value = [id, comment_id];
+        const value = [id, commentId];
         const result = await client.query(text, value);
         console.log(result.rows[0], "Comment deleted successfully");
         res.status(200).json({ message: "Comment deleted successfully" });
@@ -264,74 +307,94 @@ app.delete("/resources/:id/comments/:comment_id", async (req, res) => {
     }
 });
 
-app.get("/resources/:id/likes", async (req, res) => {
+//Resource votes
+app.get("/resources/:id/votes", async (req, res) => {
     try {
         const id = req.params.id;
-        const text = "SELECT likes FROM resource_votes WHERE id = $1";
+        const text = "SELECT * FROM resource_votes WHERE resource_id = $1";
         const value = [id];
         const result = await client.query(text, value);
-        res.status(200).json(result.rows[0]);
+        res.status(200).json(result.rows);
     } catch (error) {
         console.error(error);
     }
 });
 
-app.put("/resources/:id/likes", async (req, res) => {
+app.patch("/resources/:id/votes", async (req, res) => {
     try {
+        const { voteType, voteAmount } = req.body;
         const id = req.params.id;
-        const text =
-            "INSERT INTO resource_votes (id, likes) VALUES ($1, 1) ON CONFLICT (id) DO UPDATE SET likes = resource_votes.likes + 1";
-        const value = [id];
-        await client.query(text, value);
-        const updatedResult = await client.query(
-            "SELECT likes FROM resource_votes WHERE id = $1",
-            [id]
-        );
-        console.log("Updated likes count:", updatedResult.rows[0].likes);
-        res.status(200).send("updated successfully");
+        let queryText;
+        let queryResult;
+        if (voteType === "like") {
+            queryText =
+                "INSERT INTO resource_votes (resource_id, likes) VALUES ($1, 1) ON CONFLICT (resource_id) DO UPDATE SET likes = resource_votes.likes + $2 returning *";
+            queryResult = await client.query(queryText, [id, voteAmount]);
+        } else {
+            queryText =
+                "INSERT INTO resource_votes (resource_id, likes) VALUES ($1, 1) ON CONFLICT (resource_id) DO UPDATE SET dislikes = resource_votes.dislikes + $2 returning *";
+            queryResult = await client.query(queryText, [id, voteAmount]);
+        }
+        res.status(200).json(queryResult.rows);
     } catch (error) {
         console.log(error);
     }
 });
 
-app.get("/resources/:id/dislikes", async (req, res) => {
+// Study list
+app.get("/users/:userId/study-list", async (req, res) => {
     try {
-        const id = req.params.id;
-        const text = "SELECT dislikes FROM resource_votes WHERE id = $1";
-        const value = [id];
-        const result = await client.query(text, value);
-        res.status(200).json(result.rows[0]);
-    } catch (error) {
-        console.error(error);
-    }
-});
-
-app.put("/resources/:id/dislikes", async (req, res) => {
-    try {
-        const id = req.params.id;
-        const text =
-            "INSERT INTO resource_votes (id, dislikes) VALUES ($1, 1) ON CONFLICT (id) DO UPDATE SET dislikes = resource_votes.dislikes + 1";
-        const value = [id];
-        await client.query(text, value);
-        const updatedResult = await client.query(
-            "SELECT dislikes FROM resource_votes WHERE id = $1",
-            [id]
-        );
-        console.log("Updated dislikes count:", updatedResult.rows[0].dislikes);
-        res.status(200).send("updated successfully");
+        const { userId } = req.params;
+        const queryText =
+            "SELECT id, resource_id, is_completed FROM study_list WHERE user_id = $1";
+        const queryResult = await client.query(queryText, [userId]);
+        res.status(200).json(queryResult.rows);
     } catch (error) {
         console.log(error);
     }
 });
 
-// app.get("/users/:id/study_list", async (req, res) => {
-//     try {
-//         const userId = req.params.id;
-//         const text = "SELECT study_list.id AS study_list_id, user.name AS user_name, resources.title ";
-//     } catch (error) {
-//         console.log(error);
-//     }
-// });
+app.post("/users/:userId/study-list", async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { resourceId } = req.body;
+        const queryText =
+            "INSERT INTO study_list (user_id, resource_id) VALUES ($1, $2) returning *";
+        const queryResult = await client.query(queryText, [userId, resourceId]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+app.patch("/users/:userId/study-list/:resourceId", async (req, res) => {
+    try {
+        const { userId, resourceId } = req.params;
+        const { isCompleted } = req.body;
+        const queryText =
+            "UPDATE study_list SET is_completed = $1  WHERE user_id = $2 AND resource_id = $3 returning *";
+        const queryResult = await client.query(queryText, [
+            isCompleted,
+            userId,
+            resourceId,
+        ]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+app.delete("/users/:userId/study-list/:resourceId", async (req, res) => {
+    try {
+        const { userId, resourceId } = req.params;
+        const queryText =
+            "DELETE FROM study_list WHERE user_id = $1 AND resource_id = $2 returning *";
+        const queryResult = await client.query(queryText, [userId, resourceId]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
 
 connectToDBAndStartListening();
 
