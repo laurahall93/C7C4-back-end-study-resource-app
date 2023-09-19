@@ -58,6 +58,18 @@ app.get("/users/:userId/votes", async (req, res) => {
     }
 });
 
+app.get("/users/:userId/votes/:resourceId", async (req, res) => {
+    try {
+        const { userId, resourceId } = req.params;
+        const queryText =
+            "SELECT voted FROM users_votes where user_id = $1 and resource_id = $2";
+        const queryResult = await client.query(queryText, [userId, resourceId]);
+        res.status(200).json(queryResult.rows);
+    } catch (error) {
+        console.log(error);
+    }
+});
+
 app.post("/users/:userId/votes", async (req, res) => {
     try {
         const { userId } = req.params;
