@@ -346,7 +346,7 @@ app.patch("/resources/:id/votes", async (req, res) => {
             queryResult = await client.query(queryText, [id, voteAmount]);
         } else {
             queryText =
-                "INSERT INTO resource_votes (resource_id, likes) VALUES ($1, 1) ON CONFLICT (resource_id) DO UPDATE SET dislikes = resource_votes.dislikes + $2 returning *";
+                "INSERT INTO resource_votes (resource_id, dislikes) VALUES ($1, 1) ON CONFLICT (resource_id) DO UPDATE SET dislikes = resource_votes.dislikes + $2 returning *";
             queryResult = await client.query(queryText, [id, voteAmount]);
         }
         res.status(200).json(queryResult.rows);
@@ -359,8 +359,16 @@ app.patch("/resources/:id/votes", async (req, res) => {
 app.get("/users/:userId/study-list", async (req, res) => {
     try {
         const { userId } = req.params;
-        const queryText =
-            "SELECT id, resource_id, is_completed FROM study_list WHERE user_id = $1";
+        const queryText = `SELECT s.id AS studyItem_id, s.is_completed, r.id, r.title, r.author, r.url, r.description, r.type, 
+        STRING_AGG(t.tag_name, ',') AS tags, r.first_study_time, r.creation_time, r.user_comment, r.comment_reason, u.name
+        FROM study_list s
+        JOIN resources r ON  r.id = s.resource_id
+        INNER JOIN users u ON r.created_by = u.id
+        INNER JOIN resource_tags rt ON r.id = rt.resource_id
+        INNER JOIN tags t ON rt.tag_id = t.id
+        GROUP BY r.id, s.id, u.name
+        HAVING s.user_id = $1
+        ORDER BY s.id DESC;`;
         const queryResult = await client.query(queryText, [userId]);
         res.status(200).json(queryResult.rows);
     } catch (error) {
@@ -381,16 +389,15 @@ app.post("/users/:userId/study-list", async (req, res) => {
     }
 });
 
-app.patch("/users/:userId/study-list/:resourceId", async (req, res) => {
+app.patch("/users/study-list/:studyitemId", async (req, res) => {
     try {
-        const { userId, resourceId } = req.params;
-        const { isCompleted } = req.body;
+        const { studyitemId } = req.params;
+        const { is_completed } = req.body;
         const queryText =
-            "UPDATE study_list SET is_completed = $1  WHERE user_id = $2 AND resource_id = $3 returning *";
+            "UPDATE study_list SET is_completed = $1  WHERE id = $2 returning *";
         const queryResult = await client.query(queryText, [
-            isCompleted,
-            userId,
-            resourceId,
+            is_completed,
+            studyitemId,
         ]);
         res.status(200).json(queryResult.rows);
     } catch (error) {
@@ -398,12 +405,11 @@ app.patch("/users/:userId/study-list/:resourceId", async (req, res) => {
     }
 });
 
-app.delete("/users/:userId/study-list/:resourceId", async (req, res) => {
+app.delete("/users/study-list/:studyitemId", async (req, res) => {
     try {
-        const { userId, resourceId } = req.params;
-        const queryText =
-            "DELETE FROM study_list WHERE user_id = $1 AND resource_id = $2 returning *";
-        const queryResult = await client.query(queryText, [userId, resourceId]);
+        const { studyitemId } = req.params;
+        const queryText = "DELETE FROM study_list WHERE id= $1 returning *";
+        const queryResult = await client.query(queryText, [studyitemId]);
         res.status(200).json(queryResult.rows);
     } catch (error) {
         console.log(error);
