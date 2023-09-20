@@ -226,7 +226,7 @@ app.delete("/resources/:id", async (req, res) => {
         }
         const value = [id];
         await client.query(
-            "DELETE FROM resource_votes WHERE resource_votes.id = $1",
+            "DELETE FROM resource_votes WHERE resource_votes.resource_id = $1",
             value
         );
         await client.query(
