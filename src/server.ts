@@ -217,6 +217,7 @@ app.post("/resources/", async (req, res) => {
                 [tag]
             );
             const tagId = tagIdResult.rows[0].id;
+
             await client.query("INSERT INTO resource_tags VALUES ($1, $2)", [
                 resourceId,
                 tagId,
@@ -237,7 +238,7 @@ app.delete("/resources/:id", async (req, res) => {
         }
         const value = [id];
         await client.query(
-            "DELETE FROM resource_votes WHERE resource_votes.id = $1",
+            "DELETE FROM resource_votes WHERE resource_votes.resource_id = $1",
             value
         );
         await client.query(
@@ -323,7 +324,8 @@ app.delete("/resources/:id/comments/:commentId", async (req, res) => {
 app.get("/resources/:id/votes", async (req, res) => {
     try {
         const id = req.params.id;
-        const text = "SELECT * FROM resource_votes WHERE resource_id = $1";
+        const text =
+            "SELECT likes, dislikes FROM resource_votes WHERE resource_id = $1";
         const value = [id];
         const result = await client.query(text, value);
         res.status(200).json(result.rows);
