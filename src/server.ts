@@ -92,7 +92,7 @@ app.patch("/users/:userId/votes/:resourceId", async (req, res) => {
         const { userId, resourceId } = req.params;
         const { voted } = req.body;
         const queryText =
-            "UPDATE users_votes SET voted = $1 WHERE user_id = $2 AND resource_id = $3 returning *";
+            "INSERT INTO users_votes VALUES ($2, $3, $1 ) ON CONFLICT (user_id, resource_id) DO UPDATE SET voted = $1 returning *";
         const queryResult = await client.query(queryText, [
             voted,
             userId,
