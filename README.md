@@ -53,3 +53,15 @@ After deployment, render.com should be set up to run either `yarn start` or
 `node dist/server.js`
 
 The env var DATABASE_URL will be consulted and so must be set on render.com prior to application start.
+
+## Repositories
+
+Front-end respository: https://github.com/laurahall93/C7C4-front-end-study-resource-app
+
+Back-end respository: https://github.com/laurahall93/C7C4-back-end-study-resource-app
+
+### Contributers
+
+Adil R - https://github.com/adil-rahman1
+Laura H - https://github.com/laurahall93
+Rosie S - https://github.com/rosieschofield/
