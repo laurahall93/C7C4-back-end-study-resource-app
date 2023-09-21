@@ -251,6 +251,16 @@ app.delete("/resources/:id", async (req, res) => {
             value
         );
 
+        await client.query(
+            "DELETE FROM study_list WHERE resource_id = $1",
+            value
+        );
+
+        await client.query(
+            "DELETE FROM users_votes WHERE resource_id = $1",
+            value
+        );
+
         const text = "DELETE FROM resources WHERE id = $1 RETURNING *";
 
         const result = await client.query(text, value);
